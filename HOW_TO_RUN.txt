@@ -1,0 +1,185 @@
+====================================================
+  HOW TO RUN THE CLOTHING PREDICTION API
+  (Step by step - for beginners)
+====================================================
+
+
+----------------------------------------------------
+WHAT IS THIS APP?
+----------------------------------------------------
+This is a Python API that takes a clothing image
+and tells you:
+  1. What type of clothing it is (Shirt, Pants, etc.)
+  2. What color it is (e.g. darkblue, red, etc.)
+
+It also has login, signup, and outfit suggestions
+if you have a database connected.
+
+
+----------------------------------------------------
+STEP 1 - MAKE SURE PYTHON IS INSTALLED
+----------------------------------------------------
+Open PowerShell and type:
+
+    python --version
+
+You should see something like: Python 3.11.x
+If not, download Python from https://www.python.org/downloads/
+
+
+----------------------------------------------------
+STEP 2 - GO TO THE PROJECT FOLDER
+----------------------------------------------------
+In PowerShell, type:
+
+    cd "c:\Users\aqeel\Downloads\Learning\Learning"
+
+This takes you inside the project folder.
+
+
+----------------------------------------------------
+STEP 3 - CREATE A VIRTUAL ENVIRONMENT
+----------------------------------------------------
+A virtual environment is like a clean room just
+for this project's packages. Type:
+
+    python -m venv clothingapp_env
+
+Then activate it:
+
+    clothingapp_env\Scripts\activate
+
+You will see (clothingapp_env) appear at the start
+of your terminal line. That means it is active.
+
+
+----------------------------------------------------
+STEP 4 - INSTALL THE REQUIRED PACKAGES
+----------------------------------------------------
+These are the tools the app needs to run.
+Type this one command:
+
+    pip install flask==2.3.3 pymssql pandas scikit-learn scipy opencv-python Pillow webcolors==1.13 torch torchvision
+
+Wait for everything to finish downloading.
+This may take a few minutes.
+
+
+----------------------------------------------------
+STEP 5 - MAKE SURE SQL SERVER IS RUNNING
+----------------------------------------------------
+This app needs Microsoft SQL Server to handle
+login, signup, and suggestions.
+
+Check if it is running:
+
+    Get-Service -Name 'MSSQLSERVER' -ErrorAction SilentlyContinue
+
+If it says "Running" you are good.
+If not, start it:
+
+    Start-Service -Name 'MSSQLSERVER'
+
+SQL Server connection details used by the app:
+  Server   : 127.0.0.1
+  Username : sa
+  Password : admin@123
+  Database : master
+
+Make sure these two tables exist in SQL Server:
+  - users  (columns: User_id, Email, Password, Contact)
+  - Result (columns: user_id, cloth_types, cloth_colors, Predicted_type, Predicted_color)
+
+
+----------------------------------------------------
+STEP 6 - RUN THE APP
+----------------------------------------------------
+Type this:
+
+    python Api.py
+
+You should see:
+
+    * Running on http://0.0.0.0:3377
+
+That means the API is live and ready to use!
+Do NOT close this terminal window while using the app.
+
+
+----------------------------------------------------
+STEP 7 - TEST THE ENDPOINTS
+----------------------------------------------------
+Open a NEW PowerShell window and try these:
+
+
+--- SIGNUP (create a new account) ---
+
+    curl -X POST http://localhost:3377/signup `
+      -F "user_id=john" `
+      -F "password=pass123" `
+      -F "email=john@email.com" `
+      -F "contact=1234567890"
+
+
+--- LOGIN (check credentials) ---
+
+    curl -X POST http://localhost:3377/login `
+      -F "user_id=john" `
+      -F "password=pass123"
+
+
+--- PREDICT (upload a clothing image) ---
+
+    curl -X POST http://localhost:3377/Predict `
+      -F "Image=@D:\path\to\your\image.jpg"
+
+    Replace D:\path\to\your\image.jpg with the
+    actual path to a clothing photo on your PC.
+
+    Response will look like:
+    { "Type": "Shirt", "Color": "closest match: darkblue" }
+
+
+--- SUGGESTION (get outfit recommendations) ---
+
+    curl -X POST http://localhost:3377/Suggestion `
+      -F "user_id=1"
+
+
+----------------------------------------------------
+QUICK SUMMARY
+----------------------------------------------------
+  Port     : 3377
+  Base URL : http://localhost:3377
+
+  Endpoint      Method   Needs DB?
+  /login        POST     YES
+  /signup       POST     YES
+  /Predict      POST     NO
+  /Suggestion   POST     YES
+
+
+----------------------------------------------------
+COMMON ERRORS AND FIXES
+----------------------------------------------------
+
+ERROR: ModuleNotFoundError
+FIX: Run --> pip install <missing-module-name>
+
+ERROR: ImportError: cannot import name 'CSS3_HEX_TO_NAMES'
+FIX: Run --> pip install webcolors==1.13
+
+ERROR: SQL Server connection failed
+FIX: Make sure SQL Server is running and the
+     username/password match (sa / admin@123)
+
+ERROR: images folder not found
+FIX: Create it manually -->  mkdir images
+
+ERROR: src refspec main does not match (git push)
+FIX: You have no commits yet. Run:
+     git add .
+     git commit -m "first commit"
+     git push -u origin main
+
+====================================================

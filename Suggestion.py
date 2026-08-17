@@ -1,57 +1,51 @@
-from flask import Flask, jsonify
-import pymssql
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 import pandas as pd
+import sqlite3
 
 
 def db_connect():
-    conn = pymssql.connect(server='127.0.0.1', user='sa', password='admin@123', database='master')
+    conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     return conn, cursor
 
 def db_disconnect(conn, cursor):
-    if (conn and cursor):
+    if conn and cursor:
         cursor.close()
         conn.close()
 
 
 def main(user_id):
     conn, cursor = db_connect()
-    q = f"""select * from Result"""
-    df = pd.read_sql(q, conn)
+
+    # Get all suggestions
+    all_df = pd.read_sql("SELECT * FROM Suggestions", conn)
+
+    # Get the latest prediction for this user
+    user_df = pd.read_sql(
+        "SELECT * FROM Suggestions WHERE User_id = ? ORDER BY Image_id DESC LIMIT 1",
+        conn, params=(user_id,)
+    )
     db_disconnect(conn, cursor)
-    df['cloth_features'] = df['cloth_types'] + ' ' + df['cloth_colors']
-    vectorizer = TfidfVectorizer()
 
-    cloth_matrix = vectorizer.fit_transform(df['cloth_features'])
+    if user_df.empty:
+        return []
 
-    cosine_sim = linear_kernel(cloth_matrix, cloth_matrix)
+    all_df['cloth_features'] = all_df['Predicted_type'] + ' ' + all_df['Predicted_color']
 
-    def get_cloth_recommendations(user_id, cloth_type, cloth_color, num_recommendations=2):
-        input_cloth = cloth_type + ' ' + cloth_color
+    vectorizer   = TfidfVectorizer()
+    cloth_matrix = vectorizer.fit_transform(all_df['cloth_features'])
 
-        input_cloth_vectorized = vectorizer.transform([input_cloth])
+    cloth_type  = user_df['Predicted_type'].iloc[0]
+    cloth_color = user_df['Predicted_color'].iloc[0]
 
-        similarity_scores = linear_kernel(input_cloth_vectorized, cloth_matrix).flatten()
+    input_cloth           = cloth_type + ' ' + cloth_color
+    input_vectorized      = vectorizer.transform([input_cloth])
+    similarity_scores     = linear_kernel(input_vectorized, cloth_matrix).flatten()
+    cloth_indices         = similarity_scores.argsort()[::-1]
 
-        cloth_indices = similarity_scores.argsort()[::-1]
+    user_seen = all_df[all_df['User_id'] == user_id]['cloth_features'].tolist()
+    cloth_indices = [idx for idx in cloth_indices if all_df['cloth_features'].iloc[idx] not in user_seen]
 
-        user_liked_cloths = df[df['user_ids'] == user_id]['cloth_features'].tolist()
-        cloth_indices = [idx for idx in cloth_indices if df['cloth_features'][idx] not in user_liked_cloths]
-
-        top_recommendations = df.iloc[cloth_indices[:num_recommendations]][['cloth_types', 'cloth_colors']].values.tolist()
-
-        return top_recommendations
-    
-    conn, cursor = db_connect()
-    q = f"""select top 1 * from Result  where user_id = {user_id}"""
-    df = pd.read_sql(q, conn)
-    db_disconnect(conn, cursor)
-    cloth_type = df['Predicted_type'][0]
-    cloth_color = df['Predicted_color'][0]
-    recommendations = get_cloth_recommendations(user_id, cloth_type, cloth_color)
-    return recommendations
-
-
-
+    top = all_df.iloc[cloth_indices[:2]][['Predicted_type', 'Predicted_color']].values.tolist()
+    return top
