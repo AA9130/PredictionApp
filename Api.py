@@ -4,7 +4,7 @@ from Predict import Main
 import glob
 from Predict_color import MainFunction
 import sqlite3
-from Suggestion import main
+from Suggestion import get_ecommerce_links
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -116,11 +116,12 @@ def predict():
 @app.route('/Suggestion', methods=['POST'])
 def suggestion():
     try:
-        data    = request.form
-        if 'user_id' not in data:
-            return jsonify({'error': 'Missing user_id'}), 400
-        user_id = data['user_id']
-        res     = main(user_id)
+        data = request.form
+        if 'type' not in data or 'color' not in data:
+            return jsonify({'error': 'Missing type or color'}), 400
+        cloth_type  = data['type']
+        cloth_color = data['color']
+        res = get_ecommerce_links(cloth_type, cloth_color)
         return jsonify({'result': res}), 200
     except Exception as e:
         return jsonify({'error': f'Error: {str(e)}'}), 500
