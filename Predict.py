@@ -1,51 +1,39 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
-import PIL
+from torchvision import transforms, models
 from PIL import Image
-import cv2
-import glob
-from Model import ClothingClassifier
 
 
-classes = ['T-shirt/top',
- 'Trouser',
- 'Pullover',
- 'Dress',
- 'Coat',
- 'Sandal',
- 'Shirt',
- 'Sneaker',
- 'Bag',
- 'Ankle boot']
-def preprocess(img):
-    transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=1),  
-        transforms.Resize((28, 28)),  
-        transforms.ToTensor(),  
-        transforms.Normalize(mean=[0.5], std=[0.5])  
-    ])
-    if not isinstance(img, Image.Image):
-        img = Image.fromarray(img)
-    img = transform(img)
-    
-    return img
+def load_model(model_path='CNN_Model.pth'):
+    checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+    classes  = checkpoint['classes']
+    img_size = checkpoint.get('img_size', 224)
 
-def predict(model, input):
+    model = models.mobilenet_v2(weights=None)
+    model.classifier = nn.Sequential(
+        nn.Dropout(0.3),
+        nn.Linear(model.last_channel, len(classes))
+    )
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
+    return model, classes, img_size
+
+
+def preprocess(image_path, img_size=224):
+    transform = transforms.Compose([
+        transforms.Resize((img_size, img_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std= [0.229, 0.224, 0.225]),
+    ])
+    img = Image.open(image_path).convert('RGB')
+    return transform(img).unsqueeze(0)
+
+
+def Main(image_path):
+    model, classes, img_size = load_model()
+    tensor = preprocess(image_path, img_size)
     with torch.no_grad():
-        input = input.unsqueeze(0)
-        output = model(input)
-        pred = output.argmax(dim=1)
-    return pred.item()
-
-
-def Main(image):
-    model = ClothingClassifier() 
-    model.load_state_dict(torch.load('CNN_Model.pth', map_location=torch.device('cpu')))
-    img = cv2.imread(image, 0)
-    new_image = preprocess(img)
-    return classes[int(predict(model, new_image))]
-
+        output = model(tensor)
+        pred   = output.argmax(dim=1).item()
+    return classes[pred]

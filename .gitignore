@@ -1,0 +1,45 @@
+
+# Dataset & training data
+data/
+
+# Trained model (large binary)
+CNN_Model.pth
+*.pth
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.env
+
+# Kaggle credentials
+kaggle.json
+*.kaggle
+
+# Database file
+database.db
+
+# Zip files
+*.zip
+*.gz
+*.tar
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Generated files
+ERD.png
+generate_erd.py
